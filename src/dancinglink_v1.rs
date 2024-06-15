@@ -1,4 +1,6 @@
-use std::slice::SliceIndex;
+use std::fmt::Display;
+
+use crate::utils;
 
 #[allow(non_snake_case)]
 struct DL {
@@ -20,7 +22,7 @@ const DEFAULT_COL: usize = 10;
 
 impl DL {
     #[allow(non_snake_case)]
-    fn new(row_size: usize, col_size: usize) -> Self {
+    pub fn new(row_size: usize, col_size: usize) -> Self {
         let row_size = if row_size < 1 { DEFAULT_ROW } else { row_size };
         let col_size = if col_size < 1 { DEFAULT_COL } else { col_size };
         let idx_max = row_size * col_size + 1;
@@ -67,7 +69,11 @@ impl DL {
     }
 
     // row and col idx starts with 1
-    fn insert(&mut self, row: usize, col: usize) {
+    pub fn insert(&mut self, row: usize, col: usize) {
+        assert!(
+            row <= self.r && col <= self.c,
+            "Insert: row or col is out of index"
+        );
         // Because of an extra 0 idx, when we insert a elem, we should ++idx first
         self.idx += 1;
         self.row[self.idx] = row;
@@ -95,4 +101,28 @@ impl DL {
             self.R[self.first[row]] = self.idx;
         }
     }
+
+    fn get_2d_vec(&self) -> Vec<Vec<usize>> {
+        let mut res_vec = vec![vec![0; self.c]; self.r];
+        for (c, row) in res_vec.iter_mut().enumerate().take(self.c + 1).skip(1) {
+            let first_idx = self.first[c];
+            let mut idx = first_idx;
+            while idx != 0 {
+                row[self.col[idx]] = 1;
+                idx = self.R[idx];
+                if idx == first_idx {
+                    break;
+                }
+            }
+        }
+        res_vec
+    }
 }
+
+impl Display for DL {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str_ = utils::format_2d_string(&self.get_2d_vec());
+        write!(f, "{str_}")
+    }
+}
+
