@@ -1,3 +1,5 @@
+use std::slice::SliceIndex;
+
 #[allow(non_snake_case)]
 struct DL {
     r: usize, // row size
@@ -20,15 +22,17 @@ impl DL {
     #[allow(non_snake_case)]
     fn new(row_size: usize, col_size: usize) -> Self {
         let row_size = if row_size < 1 { DEFAULT_ROW } else { row_size };
-        let col_size = if col_size < 1 { DEFAULT_COL } else { col_size + 1};
-        let first = Vec::new();
-        let size = vec![0; row_size];
-        let row = Vec::new();
-        let col = Vec::new();
-        let mut L = vec![0; col_size];
-        let mut R = vec![0, col_size];
-        let mut U = vec![0, row_size];
-        let mut D = vec![0, row_size];
+        let col_size = if col_size < 1 { DEFAULT_COL } else { col_size };
+        let idx_max = row_size * col_size + 1;
+        // Actually, we do not use idx 0, so idx in first and size starts with 1
+        let first = vec![0; row_size + 1];
+        let size = vec![0; row_size + 1];
+        let row = vec![0; idx_max];
+        let col = vec![0; idx_max];
+        let mut L = vec![0; idx_max];
+        let mut R = vec![0, idx_max];
+        let mut U = vec![0, idx_max];
+        let mut D = vec![0, idx_max];
 
         // We build a new virtual row, but we don't add them to row or col vectors
         // Note: Extra idx 0 element
@@ -43,7 +47,7 @@ impl DL {
             R[i] = if i != col_size { i + 1 } else { 0 };
         }
 
-        // We maintain a global idx and it is in ascending order 
+        // We maintain a global idx and it is in ascending order
         // when we are constructing this Cross-Linked List
         let idx = col_size;
 
@@ -62,9 +66,33 @@ impl DL {
         }
     }
 
-    fn insert(row: usize, col: usize) {
+    // row and col idx starts with 1
+    fn insert(&mut self, row: usize, col: usize) {
         // Because of an extra 0 idx, when we insert a elem, we should ++idx first
-        // Condition 
+        self.idx += 1;
+        self.row[self.idx] = row;
+        self.col[self.idx] = col;
+        self.size[col] += 1;
+        // Idx directly links to col element in virtual row
+        // Like head insert in linked list
+        self.U[self.idx] = col;
+        self.D[self.idx] = self.D[col];
+        self.U[self.D[col]] = self.idx;
+        self.D[col] = self.idx;
+        // Condition 1
+        // There is no element in row r, we directly insert it into this row
+        // and let the point first point to this element
+        if self.first[row] == 0 {
+            self.first[row] = self.idx;
+            self.L[self.idx] = self.idx;
+            self.R[self.idx] = self.idx;
+        } else {
+            // Once the first[row] is not 0, it can't be change when inserting
+            // So, we insert a new element after element the first[row] points to
+            self.L[self.idx] = self.first[row];
+            self.R[self.idx] = self.L[self.first[row]];
+            self.L[self.first[row]] = self.idx;
+            self.R[self.first[row]] = self.idx;
+        }
     }
-
 }
