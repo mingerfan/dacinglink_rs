@@ -32,9 +32,9 @@ impl DL {
         let row = vec![0; idx_max];
         let col = vec![0; idx_max];
         let mut L = vec![0; idx_max];
-        let mut R = vec![0, idx_max];
-        let mut U = vec![0, idx_max];
-        let mut D = vec![0, idx_max];
+        let mut R = vec![0; idx_max];
+        let mut U = vec![0; idx_max];
+        let mut D = vec![0; idx_max];
 
         // We build a new virtual row, but we don't add them to row or col vectors
         // Note: Extra idx 0 element
@@ -103,7 +103,7 @@ impl DL {
     }
 
     fn get_2d_vec(&self) -> Vec<Vec<usize>> {
-        let mut res_vec = vec![vec![0; self.c]; self.r];
+        let mut res_vec = vec![vec![0; self.c + 1]; self.r + 1];
         for (c, row) in res_vec.iter_mut().enumerate().take(self.c + 1).skip(1) {
             let first_idx = self.first[c];
             let mut idx = first_idx;
@@ -126,3 +126,18 @@ impl Display for DL {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn print_dl() {
+        let mut dl = DL::new(30, 30);
+        let test_vec = vec![(1, 2), (2, 5), (3, 8), (30, 30), (25, 1), (30, 1)];
+        println!("{dl}");
+        for (row, col) in test_vec {
+            dl.insert(row, col);
+        }
+        println!("{dl}");
+    }
+}
