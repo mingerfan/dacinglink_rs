@@ -13,7 +13,11 @@ pub fn format_2d_string<T: Display>(vec_2d: &Vec<Vec<T>>) -> String {
     result.push_str("r/c\t");
     for (col, val) in x_axis_vec.iter().enumerate() {
         let col_width = std::cmp::max(col_widths[col], x_tick_label_widths[col]);
-        let formatted_value = format!("{:width$} ", val, width = if col_width < 2 { 2 } else { col_width });
+        let formatted_value = format!(
+            "{:width$} ",
+            val,
+            width = if col_width < 2 { 2 } else { col_width }
+        );
         result.push_str(&formatted_value);
     }
     result.push('\n');
@@ -22,7 +26,11 @@ pub fn format_2d_string<T: Display>(vec_2d: &Vec<Vec<T>>) -> String {
         for (col, value) in row.iter().enumerate() {
             // Use the format! macro to add each element to the string, aligned by column width
             let col_width = std::cmp::max(col_widths[col], x_tick_label_widths[col]);
-            let formatted_value = format!("{:width$} ", value, width = if col_width < 2 { 2 } else { col_width });
+            let formatted_value = format!(
+                "{:width$} ",
+                value,
+                width = if col_width < 2 { 2 } else { col_width }
+            );
             result.push_str(&formatted_value);
         }
         result.push('\n'); // Add a newline at the end of each row

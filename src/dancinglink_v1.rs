@@ -2,8 +2,11 @@ use std::fmt::Display;
 
 use crate::utils;
 
+// Code Reference: http://magic.vicp.io/oi-wiki/search/dlx/
+// Code Reference: https://blog.csdn.net/nameofcsdn/article/details/132225150
+
 #[allow(non_snake_case)]
-struct DL {
+pub struct DL {
     r: usize, // row size
     c: usize, // col size
     idx: usize,
@@ -15,6 +18,7 @@ struct DL {
     R: Vec<usize>,
     U: Vec<usize>,
     D: Vec<usize>,
+    res: Option<(usize, Vec<usize>)>, // usize: the max deep when dancing
 }
 
 const DEFAULT_ROW: usize = 10;
@@ -35,6 +39,7 @@ impl DL {
         let mut R = vec![0; idx_max];
         let mut U = vec![0; idx_max];
         let mut D = vec![0; idx_max];
+        let res = None;
 
         // We build a new virtual row, but we don't add them to row or col vectors
         // Note: Extra idx 0 element
@@ -65,6 +70,7 @@ impl DL {
             R,
             U,
             D,
+            res,
         }
     }
 
@@ -107,7 +113,7 @@ impl DL {
         for (c, row) in res_vec.iter_mut().enumerate().take(self.c + 1).skip(1) {
             let first_idx = self.first[c];
             let mut idx = first_idx;
-            while idx != 0 {
+            while idx != 0 && self.L[idx] != 0 {
                 row[self.col[idx]] = 1;
                 idx = self.R[idx];
                 if idx == first_idx {
@@ -119,10 +125,70 @@ impl DL {
     }
 }
 
+// It is maybe only correct before any removal operation.
 impl Display for DL {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str_ = utils::format_2d_string(&self.get_2d_vec());
         write!(f, "{str_}")
+    }
+}
+
+impl DL {
+    // In this function, we will remove the column and the corresponding rows to which items in this column are linked.
+    fn remove(&mut self, col: usize) {
+        let mut vertical_idx = self.D[col];
+        let mut horizontal_idx;
+        self.L[self.R[col]] = self.L[col];
+        self.R[self.L[col]] = self.R[col];
+        while vertical_idx != col {
+            horizontal_idx = self.R[vertical_idx];
+            while horizontal_idx != vertical_idx {
+                self.U[self.D[horizontal_idx]] = self.U[horizontal_idx];
+                self.D[self.U[horizontal_idx]] = self.D[horizontal_idx];
+                self.size[self.col[horizontal_idx]] -= 1;
+                horizontal_idx = self.R[horizontal_idx];
+            }
+            vertical_idx = self.D[vertical_idx];
+        }
+    }
+
+    // In this function, we will restore the column and the corresponding rows that were previously removed.
+    fn recover(&mut self, col: usize) {
+        let mut vertical_idx = self.U[col];
+        let mut horizontal_idx;
+        while vertical_idx != col {
+            horizontal_idx = self.L[vertical_idx];
+            while horizontal_idx != vertical_idx {
+                self.U[self.D[horizontal_idx]] = horizontal_idx;
+                self.D[self.U[horizontal_idx]] = horizontal_idx;
+                horizontal_idx = self.L[horizontal_idx];
+            }
+            vertical_idx = self.U[vertical_idx];
+        }
+    }
+
+    fn dance_internal(&mut self, deep: usize) -> bool {
+        // if empty, return false
+        if self.R[0] == 0 {
+            // In external function, we should ensure self.res is not None
+            self.res.as_mut().map(|(_, res_vec)| (deep, res_vec));
+            return true;
+        }
+        // Choose the column with least elements
+        let mut min = self.c + 1;
+        let mut horizontal_idx = self.R[0];
+        while horizontal_idx != 0 {
+            let cur = self.size[horizontal_idx];
+            if cur < min {
+                min = cur;
+            }
+            horizontal_idx = self.R[horizontal_idx]
+        }
+
+        // Attemp to remove the selected column
+        self.remove(min);
+
+        todo!()
     }
 }
 
