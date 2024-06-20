@@ -1,4 +1,7 @@
+use std::collections::HashSet;
 use std::fmt::Display;
+
+use rand::Rng;
 
 // Custom function to format a 2D Vec and return a string
 pub fn format_2d_string<T: Display>(vec_2d: &Vec<Vec<T>>) -> String {
@@ -51,4 +54,34 @@ fn calculate_col_widths<T: ToString>(vec_2d: &Vec<Vec<T>>) -> Vec<usize> {
         }
     }
     col_widths
+}
+
+// Generate a sparse matrix and ensure there is a solution
+fn generate_sparse_matrix_with_solution(
+    rows: usize,
+    cols: usize,
+    solution_rows: usize,
+) -> Vec<Vec<usize>> {
+    assert!(solution_rows <= rows);
+    let mut matrix = vec![vec![0; cols]; rows];
+    let mut covered_cols = vec![false; cols];
+
+    // Randomly select some rows as part of the solution
+    let mut selected_rows: HashSet<usize> = HashSet::new();
+    while selected_rows.len() < solution_rows {
+        selected_rows.insert(rand::random::<usize>() % rows);
+    }
+
+    let mut rng = rand::thread_rng();
+
+    for &row in &selected_rows {
+        for (col, covered_col) in covered_cols.iter_mut().enumerate() {
+            if rng.gen_bool((col + 1) as f64 / cols as f64) && !*covered_col {
+                matrix[row][col] = 1;
+                *covered_col = true;
+            }
+        }
+    }
+
+    matrix
 }

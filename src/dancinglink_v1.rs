@@ -23,6 +23,7 @@ pub struct DL {
 
 const DEFAULT_ROW: usize = 10;
 const DEFAULT_COL: usize = 10;
+const MAX_DEEP: usize = 100;
 
 impl DL {
     #[allow(non_snake_case)]
@@ -174,6 +175,7 @@ impl DL {
             self.res.as_mut().map(|(_, res_vec)| (deep, res_vec));
             return true;
         }
+        self.res.as_mut().unwrap().0 = deep;
         // Choose the column with least elements
         let mut min = self.c + 1;
         let mut horizontal_idx = self.R[0];
@@ -188,7 +190,41 @@ impl DL {
         // Attemp to remove the selected column
         self.remove(min);
 
-        todo!()
+        let mut vertical_idx = self.D[min];
+        let mut horizontal_idx;
+        while vertical_idx != min {
+            // ugly code
+            self.res.as_mut().unwrap().1[deep] = self.row[vertical_idx];
+            horizontal_idx = self.R[vertical_idx];
+            while horizontal_idx != vertical_idx {
+                self.remove(horizontal_idx);
+                horizontal_idx = self.R[horizontal_idx];
+            }
+            if self.dance_internal(deep + 1) {
+                return true;
+            }
+            let mut h_idx_recover = self.L[vertical_idx];
+            while h_idx_recover != vertical_idx {
+                self.recover(h_idx_recover);
+                h_idx_recover = self.L[h_idx_recover];
+            }
+            vertical_idx = self.D[vertical_idx]
+        }
+        self.recover(min);
+
+        false
+    }
+
+    pub fn dance(&mut self) -> Result<(usize, Vec<usize>), String> {
+        self.res = Some((0, Vec::with_capacity(MAX_DEEP)));
+        let res = self.dance_internal(0);
+        if !res {
+            Err("This is a useless info to make clippy happy".to_string())
+        } else {
+            self.res
+                .clone()
+                .ok_or("This is a useless info to make clippy happy".to_string())
+        }
     }
 }
 
