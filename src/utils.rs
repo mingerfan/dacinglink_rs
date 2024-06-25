@@ -1,6 +1,4 @@
 use std::fmt::Display;
-use std::collections::HashSet;
-
 
 // Custom function to format a 2D Vec and return a string
 pub fn format_2d_string<T: Display>(vec_2d: &Vec<Vec<T>>) -> String {
@@ -55,8 +53,15 @@ fn calculate_col_widths<T: ToString>(vec_2d: &Vec<Vec<T>>) -> Vec<usize> {
     col_widths
 }
 
+#[cfg(test)]
 // Generate a sparse matrix and ensure there is a solution
-fn generate_sparse_matrix_with_solution(rows: usize, cols: usize, solution_rows: usize) -> Vec<Vec<usize>> {
+pub fn generate_sparse_matrix_with_solution(
+    rows: usize,
+    cols: usize,
+    solution_rows: usize,
+) -> Vec<Vec<usize>> {
+    use std::collections::HashSet;
+
     assert!(solution_rows <= rows);
     let mut matrix = vec![vec![0; cols]; rows];
     let mut covered_cols = vec![false; cols];
@@ -87,7 +92,11 @@ fn generate_sparse_matrix_with_solution(rows: usize, cols: usize, solution_rows:
 
     let mut rng = rand::thread_rng();
 
-    for (_, m_cols) in matrix.iter_mut().enumerate().filter(|(row, _)| !selected_rows.contains(row)) {
+    for (_, m_cols) in matrix
+        .iter_mut()
+        .enumerate()
+        .filter(|(row, _)| !selected_rows.contains(row))
+    {
         for m_item in m_cols.iter_mut() {
             if rand::Rng::gen_bool(&mut rng, 0.1) {
                 *m_item = 1;
@@ -96,6 +105,31 @@ fn generate_sparse_matrix_with_solution(rows: usize, cols: usize, solution_rows:
     }
 
     matrix
+}
+
+#[cfg(test)]
+pub fn check_dl_res(solution: Vec<Vec<usize>>) -> bool {
+    assert!(!solution.is_empty());
+    let mut sum = vec![0usize; solution[0].len()];
+    for vector in solution {
+        sum = sum.iter().zip(vector).map(|(a, b)| a + b).collect();
+    }
+    // println!("{:?}", sum);
+    for i in sum {
+        if i != 1 {
+            return false;
+        }
+    }
+    true
+}
+
+#[macro_export]
+macro_rules! println_cod {
+    ($sel: expr, $($arg: tt)*) => {
+        if $sel {
+            println!($($arg)*)
+        }
+    };
 }
 
 #[cfg(test)]

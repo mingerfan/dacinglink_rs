@@ -11,7 +11,7 @@ pub struct DL {
     c: usize, // col size
     idx: usize,
     first: Vec<usize>,
-    size: Vec<usize>,
+    size: Vec<isize>,
     row: Vec<usize>,
     col: Vec<usize>,
     L: Vec<usize>,
@@ -33,7 +33,7 @@ impl DL {
         let idx_max = row_size * col_size + 1;
         // Actually, we do not use idx 0, so idx in first and size starts with 1
         let first = vec![0; row_size + 1];
-        let size = vec![0; row_size + 1];
+        let size = vec![0; col_size + 1];
         let row = vec![0; idx_max];
         let col = vec![0; idx_max];
         let mut L = vec![0; idx_max];
@@ -162,10 +162,13 @@ impl DL {
             while horizontal_idx != vertical_idx {
                 self.U[self.D[horizontal_idx]] = horizontal_idx;
                 self.D[self.U[horizontal_idx]] = horizontal_idx;
+                self.size[self.col[horizontal_idx]] += 1;
                 horizontal_idx = self.L[horizontal_idx];
             }
             vertical_idx = self.U[vertical_idx];
         }
+        self.L[self.R[col]] = col;
+        self.R[self.L[col]] = col;
     }
 
     fn dance_internal(&mut self, deep: usize) -> bool {
@@ -177,12 +180,12 @@ impl DL {
         }
         self.res.as_mut().unwrap().0 = deep;
         // Choose the column with least elements
-        let mut min = self.c + 1;
+        let mut min = self.R[0];
         let mut horizontal_idx = self.R[0];
         while horizontal_idx != 0 {
             let cur = self.size[horizontal_idx];
-            if cur < min {
-                min = cur;
+            if cur < self.size[min] {
+                min = horizontal_idx;
             }
             horizontal_idx = self.R[horizontal_idx]
         }
@@ -197,7 +200,7 @@ impl DL {
             self.res.as_mut().unwrap().1[deep] = self.row[vertical_idx];
             horizontal_idx = self.R[vertical_idx];
             while horizontal_idx != vertical_idx {
-                self.remove(horizontal_idx);
+                self.remove(self.col[horizontal_idx]);
                 horizontal_idx = self.R[horizontal_idx];
             }
             if self.dance_internal(deep + 1) {
@@ -205,7 +208,7 @@ impl DL {
             }
             let mut h_idx_recover = self.L[vertical_idx];
             while h_idx_recover != vertical_idx {
-                self.recover(h_idx_recover);
+                self.recover(self.col[h_idx_recover]);
                 h_idx_recover = self.L[h_idx_recover];
             }
             vertical_idx = self.D[vertical_idx]
@@ -216,7 +219,7 @@ impl DL {
     }
 
     pub fn dance(&mut self) -> Result<(usize, Vec<usize>), String> {
-        self.res = Some((0, Vec::with_capacity(MAX_DEEP)));
+        self.res = Some((0, vec![0; MAX_DEEP]));
         let res = self.dance_internal(0);
         if !res {
             Err("This is a useless info to make clippy happy".to_string())
@@ -230,6 +233,12 @@ impl DL {
 
 #[cfg(test)]
 mod test {
+    use std::{sync::mpsc::{self, TryRecvError}, thread, time::{Duration, Instant}};
+
+    use proptest::prelude::*;
+
+    use crate::println_cod;
+
     use super::*;
 
     #[test]
@@ -241,5 +250,95 @@ mod test {
             dl.insert(row, col);
         }
         println!("{dl}");
+    }
+
+    fn test_base(r: usize, c: usize, case: Vec<Vec<usize>>, cod: bool) -> bool {
+        let mut dl = DL::new(r, c);
+        for (r_in, c_vec) in case.iter().enumerate() {
+            for (c_in, item) in c_vec.iter().enumerate() {
+                if *item == 1 {
+                    dl.insert(r_in + 1, c_in + 1)
+                }
+            }
+        }
+        println_cod!(cod, "{dl}");
+        println_cod!(cod, "{:?}", dl.size);
+        let res = dl.dance();
+        println_cod!(cod, "{:?}", res);
+        if let Ok((_, sol)) = res {
+            let sol = sol
+            .iter()
+            .enumerate()
+            .filter(|(_, &x)| { x != 0 })
+            .map(|(idx, _)| case[sol[idx]-1].clone())
+            .collect();
+            println_cod!(cod, "{:?}", sol);
+            if utils::check_dl_res(sol) {
+                return true
+            }
+        }
+        false
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+        #[test]
+        fn test_dl_pass((r, s) in (5..=30usize).prop_flat_map(|r|  (Just(r), 3..=r)), c in 5..=30usize) {
+            let case = utils::generate_sparse_matrix_with_solution(r, c, s);
+            // if !test_base(r, c, case, false) {
+            //     panic!("Test Failed")
+            // }
+
+            // Set the timeout duration
+            let timeout = Duration::from_secs(120);
+
+            // Create a channel for thread communication
+            let (tx, rx) = mpsc::channel();
+
+            // Spawn a new thread to run the test logic
+            let handle = thread::spawn(move || {
+                let res = test_base(r, c, case, false);
+                let _ = tx.send(());
+                res
+            });
+
+            // Monitor the test thread execution time in the main thread
+            let start_time = Instant::now();
+            loop {
+                match rx.try_recv() {
+                    Ok(_) => {
+                        // Test thread completed
+                        break;
+                    }
+                    Err(TryRecvError::Empty) => {
+                        // Continue waiting
+                        if start_time.elapsed() > timeout {
+                            // Timeout occurred
+                            handle.thread().unpark(); // Attempt to wake up the thread to be forcefully terminated
+                            panic!("Test timed out");
+                        }
+                    }
+                    Err(TryRecvError::Disconnected) => {
+                        panic!("Test thread panicked or disconnected");
+                    }
+                }
+                thread::sleep(Duration::from_millis(10)); // Wait a short duration before checking again
+            }
+
+            let result = handle.join().expect("Test thread panicked");
+            prop_assert!(result);
+        }
+    }
+
+    #[test]
+    fn test_dl_special() {
+        let params = [(5, 16, 2), (30, 30, 5)];
+        for (r, c, s) in params {
+            let case = utils::generate_sparse_matrix_with_solution(r, c, s);
+            println!("{}", utils::format_2d_string(&case));
+            if !test_base(r, c, case, true) {
+                panic!("Test Failed")
+            }
+        }
     }
 }
