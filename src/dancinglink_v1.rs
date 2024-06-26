@@ -103,8 +103,8 @@ impl DL {
             // Once the first[row] is not 0, it can't be change when inserting
             // So, we insert a new element after element the first[row] points to
             self.L[self.idx] = self.first[row];
-            self.R[self.idx] = self.L[self.first[row]];
-            self.L[self.first[row]] = self.idx;
+            self.R[self.idx] = self.R[self.first[row]];
+            self.L[self.R[self.first[row]]] = self.idx;
             self.R[self.first[row]] = self.idx;
         }
     }
@@ -273,7 +273,7 @@ mod test {
             .map(|(idx, _)| case[sol[idx]-1].clone())
             .collect();
             println_cod!(cod, "{:?}", sol);
-            if utils::check_dl_res(sol) {
+            if utils::check_dl_res(sol, cod) {
                 return true
             }
         }
@@ -281,23 +281,24 @@ mod test {
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(100))]
+        #![proptest_config(ProptestConfig::with_cases(10000))]
         #[test]
         fn test_dl_pass((r, s) in (5..=30usize).prop_flat_map(|r|  (Just(r), 3..=r)), c in 5..=30usize) {
             let case = utils::generate_sparse_matrix_with_solution(r, c, s);
             // if !test_base(r, c, case, false) {
             //     panic!("Test Failed")
             // }
+            let case_clone = case.clone();
 
             // Set the timeout duration
-            let timeout = Duration::from_secs(120);
+            let timeout = Duration::from_secs(10);
 
             // Create a channel for thread communication
             let (tx, rx) = mpsc::channel();
 
             // Spawn a new thread to run the test logic
             let handle = thread::spawn(move || {
-                let res = test_base(r, c, case, false);
+                let res = test_base(r, c, case_clone, false);
                 let _ = tx.send(());
                 res
             });
@@ -315,6 +316,8 @@ mod test {
                         if start_time.elapsed() > timeout {
                             // Timeout occurred
                             handle.thread().unpark(); // Attempt to wake up the thread to be forcefully terminated
+                            println!("{:?}", &case);
+                            utils::save_failed_case(&utils::Matrix(case.clone()), "failed_cases.txt");
                             panic!("Test timed out");
                         }
                     }
@@ -326,18 +329,32 @@ mod test {
             }
 
             let result = handle.join().expect("Test thread panicked");
+            if !result {
+                utils::save_failed_case(&utils::Matrix(case.clone()), "failed_cases.txt");
+            }
             prop_assert!(result);
         }
     }
 
     #[test]
     fn test_dl_special() {
-        let params = [(5, 16, 2), (30, 30, 5)];
-        for (r, c, s) in params {
-            let case = utils::generate_sparse_matrix_with_solution(r, c, s);
-            println!("{}", utils::format_2d_string(&case));
-            if !test_base(r, c, case, true) {
-                panic!("Test Failed")
+        // let params = [
+        //     (5, 16, 2), 
+        //     (30, 30, 5),
+        //     (14, 5, 13),    
+        // ];
+        // for (r, c, s) in params {
+        //     let case = utils::generate_sparse_matrix_with_solution(r, c, s);
+        //     println!("{}", utils::format_2d_string(&case));
+        //     if !test_base(r, c, case, true) {
+        //         panic!("Test Failed")
+        //     }
+        // }
+        if let Ok(cases) = utils::load_failed_cases("failed_cases.txt") {
+            for i in cases {
+                if !test_base(i.0.len(), i.0[0].len(), i.0, true) {
+                    panic!("Test Failed");
+                }
             }
         }
     }

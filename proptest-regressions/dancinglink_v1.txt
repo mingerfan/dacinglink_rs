@@ -7,3 +7,9 @@
 cc a7819a0fafedb8dfbf0b1067bf041297fd9daaa45b64e0f8b54288fe15431592 # shrinks to (r, s) = (5, 3), c = 5
 cc e017717d809e20041cd8bb2e67bc876ffb3b987c49525ea25e4c0ea1425a785a # shrinks to (r, s) = (22, 4), c = 21
 cc c640b0e22658233806340d558f3906121b0aaa72cd128ec62a7b8818c75138d7 # shrinks to (r, s) = (14, 5), c = 13
+cc ad302f0802b57607551d847ed4be45011b67592ee6629a2c281e17ca5ba6996e # shrinks to (r, s) = (30, 10), c = 11
+cc 8a627c2bac16be711fd72be4248a29177986ffbc803a3de0486b3f648b54599b # shrinks to (r, s) = (28, 6), c = 16
+cc 2da9dc23ed8037cb8160705c11e3af89e250d3143d1905de575952813a2d8bc8 # shrinks to (r, s) = (15, 9), c = 16
+cc 38612a2773abd26564d617f2801b0b67ef4dfcdf30bd7c8473a2b2c1e62ecd09 # shrinks to (r, s) = (28, 5), c = 18
+cc 7cc13ec448b241063a78f1b39192b6bd98c046dc18fd678c2a7ded83274cee6c # shrinks to (r, s) = (18, 4), c = 15
+cc 3456acd6823223e310d57c1313e8d058ee81a3b0c969943c24ba9787ed6ee74b # shrinks to (r, s) = (25, 4), c = 19

@@ -1,4 +1,6 @@
-use std::fmt::Display;
+use std::{error::Error, fmt::Display, fs::OpenOptions, io::{BufRead, BufReader, BufWriter, Write}};
+
+use serde::{Deserialize, Serialize};
 
 // Custom function to format a 2D Vec and return a string
 pub fn format_2d_string<T: Display>(vec_2d: &Vec<Vec<T>>) -> String {
@@ -90,6 +92,12 @@ pub fn generate_sparse_matrix_with_solution(
         }
     }
 
+    let test = selected_rows
+        .iter()
+        .map(|idx| matrix[*idx].clone())
+        .collect();
+    assert!(check_dl_res(test, true), "Failed to gen valid matrix");
+
     let mut rng = rand::thread_rng();
 
     for (_, m_cols) in matrix
@@ -107,20 +115,36 @@ pub fn generate_sparse_matrix_with_solution(
     matrix
 }
 
-#[cfg(test)]
-pub fn check_dl_res(solution: Vec<Vec<usize>>) -> bool {
-    assert!(!solution.is_empty());
-    let mut sum = vec![0usize; solution[0].len()];
-    for vector in solution {
-        sum = sum.iter().zip(vector).map(|(a, b)| a + b).collect();
-    }
-    // println!("{:?}", sum);
-    for i in sum {
-        if i != 1 {
-            return false;
-        }
-    }
-    true
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Matrix(pub Vec<Vec<usize>>);
+
+// Function to save a failed test case to a file
+pub fn save_failed_case(matrix: &Matrix, file_path: &str) {
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(file_path)
+        .expect("Failed to open file");
+    let mut writer = BufWriter::new(file);
+
+    serde_json::to_writer(&mut writer, &matrix).expect("Failed to write matrix");
+    writer.write_all(b"\n").expect("Failed to write newline");
+}
+
+// Function to load all failed test cases from a file
+pub fn load_failed_cases(file_path: &str) -> Result<Vec<Matrix>, Box<dyn Error>> {
+    let file = OpenOptions::new()
+        .read(true)
+        .open(file_path)?;
+    let reader = BufReader::new(file);
+
+    let res = reader
+        .lines()
+        .filter_map(|line| {
+            line.ok().and_then(|s| serde_json::from_str(&s).ok())
+        })
+        .collect();
+    Ok(res)
 }
 
 #[macro_export]
@@ -133,7 +157,26 @@ macro_rules! println_cod {
 }
 
 #[cfg(test)]
+pub fn check_dl_res(solution: Vec<Vec<usize>>, cod: bool) -> bool {
+    assert!(!solution.is_empty());
+    let mut sum = vec![0usize; solution[0].len()];
+    for vector in solution {
+        sum = sum.iter().zip(vector).map(|(a, b)| a + b).collect();
+    }
+    println_cod!(cod, "{:?}", sum);
+    for i in sum {
+        if i != 1 {
+            return false;
+        }
+    }
+    true
+}
+
+
+#[cfg(test)]
 mod test {
+    use std::fs;
+
     use super::*;
 
     #[test]
@@ -141,5 +184,20 @@ mod test {
         let res = generate_sparse_matrix_with_solution(20, 20, 8);
         let res = format_2d_string(&res);
         println!("{res}")
+    }
+
+    #[test]
+    fn test_case_store_load() {
+        let mat = Matrix(vec![vec![1, 2, 3], vec![1, 2, 3]]);
+        save_failed_case(&mat, "cases_test.temptxt");
+        save_failed_case(&mat, "cases_test.temptxt");
+        save_failed_case(&mat, "cases_test.temptxt");
+        let res = std::panic::catch_unwind(|| {
+            for i in load_failed_cases("cases_test.temptxt").unwrap() {
+                assert_eq!(&i, &mat)
+            }
+        });
+        let _ = fs::remove_file("cases_test.temptxt");
+        assert!(res.is_ok())
     }
 }
