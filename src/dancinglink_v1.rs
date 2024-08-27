@@ -6,6 +6,7 @@ use crate::utils;
 // Code Reference: https://blog.csdn.net/nameofcsdn/article/details/132225150
 
 #[allow(non_snake_case)]
+#[derive(Debug)]
 pub struct DL {
     r: usize, // row size
     c: usize, // col size
@@ -233,13 +234,19 @@ impl DL {
 
 #[cfg(test)]
 mod test {
-    use std::{sync::mpsc::{self, TryRecvError}, thread, time::{Duration, Instant}};
+    use core::panic;
+    use std::{
+        sync::mpsc::{self, TryRecvError},
+        thread,
+        time::{Duration, Instant},
+    };
 
     use proptest::prelude::*;
 
     use crate::println_cod;
 
     use super::*;
+
 
     #[test]
     fn print_dl() {
@@ -261,20 +268,20 @@ mod test {
                 }
             }
         }
-        println_cod!(cod, "{dl}");
-        println_cod!(cod, "{:?}", dl.size);
+        println_cod!(cod, "array:\n {dl}");
+        println_cod!(cod, "array size: {:?}", dl.size);
         let res = dl.dance();
-        println_cod!(cod, "{:?}", res);
+        println_cod!(cod, "dancing res: {:?}", res);
         if let Ok((_, sol)) = res {
             let sol = sol
-            .iter()
-            .enumerate()
-            .filter(|(_, &x)| { x != 0 })
-            .map(|(idx, _)| case[sol[idx]-1].clone())
-            .collect();
-            println_cod!(cod, "{:?}", sol);
+                .iter()
+                .enumerate()
+                .filter(|(_, &x)| x != 0)
+                .map(|(idx, _)| case[sol[idx] - 1].clone())
+                .collect();
+            println_cod!(cod, "solution: {:?}", sol);
             if utils::check_dl_res(sol, cod) {
-                return true
+                return true;
             }
         }
         false
@@ -284,11 +291,14 @@ mod test {
         #![proptest_config(ProptestConfig::with_cases(10000))]
         #[test]
         fn test_dl_pass((r, s) in (5..=30usize).prop_flat_map(|r|  (Just(r), 3..=r)), c in 5..=30usize) {
-            let case = utils::generate_sparse_matrix_with_solution(r, c, s);
+            let ret = utils::generate_sparse_matrix_with_solution(r, c, s);
             // if !test_base(r, c, case, false) {
             //     panic!("Test Failed")
             // }
+            let case = ret.0.clone();
             let case_clone = case.clone();
+
+            let case_sol = ret.1;
 
             // Set the timeout duration
             let timeout = Duration::from_secs(10);
@@ -316,8 +326,9 @@ mod test {
                         if start_time.elapsed() > timeout {
                             // Timeout occurred
                             handle.thread().unpark(); // Attempt to wake up the thread to be forcefully terminated
-                            println!("{:?}", &case);
-                            utils::save_failed_case(&utils::Matrix(case.clone()), "failed_cases.txt");
+                            println!("mat:\n {}", utils::format_2d_string(&case));
+                            println!("sol: {:?}", utils::change_sol_base_idx(&case_sol));
+                            utils::save_failed_case(&utils::Matrix(case.clone()), &case_sol, "failed_cases.txt");
                             panic!("Test timed out");
                         }
                     }
@@ -330,7 +341,9 @@ mod test {
 
             let result = handle.join().expect("Test thread panicked");
             if !result {
-                utils::save_failed_case(&utils::Matrix(case.clone()), "failed_cases.txt");
+                println!("mat:\n {}", utils::format_2d_string(&case));
+                println!("sol: {:?}", utils::change_sol_base_idx(&case_sol));
+                utils::save_failed_case(&utils::Matrix(case.clone()), &case_sol, "failed_cases.txt");
             }
             prop_assert!(result);
         }
@@ -339,9 +352,9 @@ mod test {
     #[test]
     fn test_dl_special() {
         // let params = [
-        //     (5, 16, 2), 
+        //     (5, 16, 2),
         //     (30, 30, 5),
-        //     (14, 5, 13),    
+        //     (14, 5, 13),
         // ];
         // for (r, c, s) in params {
         //     let case = utils::generate_sparse_matrix_with_solution(r, c, s);
@@ -351,11 +364,21 @@ mod test {
         //     }
         // }
         if let Ok(cases) = utils::load_failed_cases("failed_cases.txt") {
-            for i in cases {
-                if !test_base(i.0.len(), i.0[0].len(), i.0, true) {
-                    panic!("Test Failed");
+            let mut test_res = vec![true; cases.len()];
+            for (idx, (mat, sol)) in cases.into_iter().enumerate() {
+                if !test_base(mat.0.len(), mat.0[0].len(), mat.0.clone(), true) {
+                    println!("Official solution is {:?}", utils::change_sol_base_idx(&sol));
+                    let sol_mat: Vec<_> = sol.iter().map(|i| mat.0[*i].clone()).collect();
+                    print!("{}", utils::format_2d_string(&sol_mat));
+                    let res = utils::check_dl_res(sol_mat, true);
+                    assert!(res, "check official solution failed");
+                    test_res[idx] = false
                 }
             }
+            println!("result list: {:?}", test_res);
+            assert!(test_res.iter().fold(true, |acc, x| acc & x), "Test Failed");
+        } else {
+            println!("Failed to Load failed cases!");
         }
     }
 }
