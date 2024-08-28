@@ -18,3 +18,4 @@ cc 4a9d7c2c7d9c5e496c1beed0a7d37a31f54c64bda1f7be3d7b7d50b3f3859c12 # shrinks to
 cc b4a69aac90b1eec83209c6bc7a7b33bd009f935ecd60e50676e326681f42d07d # shrinks to (r, s) = (18, 5), c = 12
 cc 5c5a3a9fb3cce2b7693a6b750ba1194f5c2288c2b6179b67926471b387e9ec4a # shrinks to (r, s) = (10, 4), c = 10
 cc 5f88a0ed7eb21b1d621c2e72e3ddce05d8c21952a6fcac860c07f49412f1e076 # shrinks to (r, s) = (15, 5), c = 8
+cc 92c422b9e4bd0ef7d8ea126baabc4957fa5602830ad77c5531d94a7470c2d813 # shrinks to (r, s) = (30, 4), c = 29

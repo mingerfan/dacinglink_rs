@@ -19,7 +19,7 @@ pub struct DL {
     R: Vec<usize>,
     U: Vec<usize>,
     D: Vec<usize>,
-    res: Option<(usize, Vec<usize>)>, // usize: the max deep when dancing
+    res: Option<Vec<usize>>, // usize: the max deep when dancing
 }
 
 const DEFAULT_ROW: usize = 10;
@@ -112,8 +112,8 @@ impl DL {
 
     fn get_2d_vec(&self) -> Vec<Vec<usize>> {
         let mut res_vec = vec![vec![0; self.c + 1]; self.r + 1];
-        for (c, row) in res_vec.iter_mut().enumerate().take(self.c + 1).skip(1) {
-            let first_idx = self.first[c];
+        for (r, row) in res_vec.iter_mut().enumerate().take(self.r + 1).skip(1) {
+            let first_idx = self.first[r];
             let mut idx = first_idx;
             while idx != 0 && self.L[idx] != 0 {
                 row[self.col[idx]] = 1;
@@ -172,14 +172,15 @@ impl DL {
         self.R[self.L[col]] = col;
     }
 
+    #[tracing::instrument]
     fn dance_internal(&mut self, deep: usize) -> bool {
+        tracing::info!("Into dancing internal");
         // if empty, return false
         if self.R[0] == 0 {
             // In external function, we should ensure self.res is not None
-            self.res.as_mut().map(|(_, res_vec)| (deep, res_vec));
+            self.res.as_mut().map(|res_vec| res_vec.truncate(deep));
             return true;
         }
-        self.res.as_mut().unwrap().0 = deep;
         // Choose the column with least elements
         let mut min = self.R[0];
         let mut horizontal_idx = self.R[0];
@@ -190,15 +191,14 @@ impl DL {
             }
             horizontal_idx = self.R[horizontal_idx]
         }
-
+        tracing::info!("Choose column: {}", min);
         // Attemp to remove the selected column
         self.remove(min);
 
         let mut vertical_idx = self.D[min];
         let mut horizontal_idx;
         while vertical_idx != min {
-            // ugly code
-            self.res.as_mut().unwrap().1[deep] = self.row[vertical_idx];
+            self.res.as_mut().unwrap()[deep] = self.row[vertical_idx];
             horizontal_idx = self.R[vertical_idx];
             while horizontal_idx != vertical_idx {
                 self.remove(self.col[horizontal_idx]);
@@ -219,8 +219,9 @@ impl DL {
         false
     }
 
-    pub fn dance(&mut self) -> Result<(usize, Vec<usize>), String> {
-        self.res = Some((0, vec![0; MAX_DEEP]));
+    pub fn dance(&mut self) -> Result<Vec<usize>, String> {
+        tracing::info!("Into dancing");
+        self.res = Some(vec![0; MAX_DEEP]);
         let res = self.dance_internal(0);
         if !res {
             Err("This is a useless info to make clippy happy".to_string())
@@ -272,7 +273,7 @@ mod test {
         println_cod!(cod, "array size: {:?}", dl.size);
         let res = dl.dance();
         println_cod!(cod, "dancing res: {:?}", res);
-        if let Ok((_, sol)) = res {
+        if let Ok(sol) = res {
             let sol = sol
                 .iter()
                 .enumerate()
@@ -363,6 +364,8 @@ mod test {
         //         panic!("Test Failed")
         //     }
         // }
+        tracing_subscriber::fmt::init();
+
         if let Ok(cases) = utils::load_failed_cases("failed_cases.txt") {
             let mut test_res = vec![true; cases.len()];
             for (idx, (mat, sol)) in cases.into_iter().enumerate() {
