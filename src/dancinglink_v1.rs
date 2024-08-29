@@ -6,7 +6,7 @@ use crate::utils;
 // Code Reference: https://blog.csdn.net/nameofcsdn/article/details/132225150
 
 #[allow(non_snake_case)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DL {
     r: usize, // row size
     c: usize, // col size
@@ -248,7 +248,6 @@ mod test {
 
     use super::*;
 
-
     #[test]
     fn print_dl() {
         let mut dl = DL::new(30, 30);
@@ -370,7 +369,10 @@ mod test {
             let mut test_res = vec![true; cases.len()];
             for (idx, (mat, sol)) in cases.into_iter().enumerate() {
                 if !test_base(mat.0.len(), mat.0[0].len(), mat.0.clone(), true) {
-                    println!("Official solution is {:?}", utils::change_sol_base_idx(&sol));
+                    println!(
+                        "Official solution is {:?}",
+                        utils::change_sol_base_idx(&sol)
+                    );
                     let sol_mat: Vec<_> = sol.iter().map(|i| mat.0[*i].clone()).collect();
                     print!("{}", utils::format_2d_string(&sol_mat));
                     let res = utils::check_dl_res(sol_mat, true);

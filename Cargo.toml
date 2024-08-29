@@ -3,7 +3,12 @@ name = "dancinglink"
 version = "0.1.0"
 edition = "2021"
 
+[[bench]]
+name="dancinglink_bench"
+harness=false
+
 [dependencies]
+criterion = "0.5.1"
 proptest = "1.5.0"
 rand = "0.8.5"
 serde= { version = "1.0", features = ["derive"]}
