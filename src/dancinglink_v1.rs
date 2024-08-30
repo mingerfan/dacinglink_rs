@@ -178,7 +178,9 @@ impl DL {
         // if empty, return false
         if self.R[0] == 0 {
             // In external function, we should ensure self.res is not None
-            self.res.as_mut().map(|res_vec| res_vec.truncate(deep));
+            if let Some(res_vec) = self.res.as_mut() {
+                res_vec.truncate(deep)
+            }
             return true;
         }
         // Choose the column with least elements
@@ -244,7 +246,7 @@ mod test {
 
     use proptest::prelude::*;
 
-    use crate::println_cod;
+    use crate::{println_cod, test_utils};
 
     use super::*;
 
@@ -280,7 +282,7 @@ mod test {
                 .map(|(idx, _)| case[sol[idx] - 1].clone())
                 .collect();
             println_cod!(cod, "solution: {:?}", sol);
-            if utils::check_dl_res(sol, cod) {
+            if test_utils::check_dl_res(sol, cod) {
                 return true;
             }
         }
@@ -291,7 +293,7 @@ mod test {
         #![proptest_config(ProptestConfig::with_cases(10000))]
         #[test]
         fn test_dl_pass((r, s) in (5..=30usize).prop_flat_map(|r|  (Just(r), 3..=r)), c in 5..=30usize) {
-            let ret = utils::generate_sparse_matrix_with_solution(r, c, s);
+            let ret = test_utils::generate_sparse_matrix_with_solution(r, c, s);
             // if !test_base(r, c, case, false) {
             //     panic!("Test Failed")
             // }
@@ -327,8 +329,8 @@ mod test {
                             // Timeout occurred
                             handle.thread().unpark(); // Attempt to wake up the thread to be forcefully terminated
                             println!("mat:\n {}", utils::format_2d_string(&case));
-                            println!("sol: {:?}", utils::change_sol_base_idx(&case_sol));
-                            utils::save_failed_case(&utils::Matrix(case.clone()), &case_sol, "failed_cases.txt");
+                            println!("sol: {:?}", test_utils::change_sol_base_idx(&case_sol));
+                            test_utils::save_failed_case(&utils::Matrix(case.clone()), &case_sol, "failed_cases.txt");
                             panic!("Test timed out");
                         }
                     }
@@ -342,8 +344,8 @@ mod test {
             let result = handle.join().expect("Test thread panicked");
             if !result {
                 println!("mat:\n {}", utils::format_2d_string(&case));
-                println!("sol: {:?}", utils::change_sol_base_idx(&case_sol));
-                utils::save_failed_case(&utils::Matrix(case.clone()), &case_sol, "failed_cases.txt");
+                println!("sol: {:?}", test_utils::change_sol_base_idx(&case_sol));
+                test_utils::save_failed_case(&utils::Matrix(case.clone()), &case_sol, "failed_cases.txt");
             }
             prop_assert!(result);
         }
@@ -365,17 +367,17 @@ mod test {
         // }
         tracing_subscriber::fmt::init();
 
-        if let Ok(cases) = utils::load_failed_cases("failed_cases.txt") {
+        if let Ok(cases) = test_utils::load_failed_cases("failed_cases.txt") {
             let mut test_res = vec![true; cases.len()];
             for (idx, (mat, sol)) in cases.into_iter().enumerate() {
                 if !test_base(mat.0.len(), mat.0[0].len(), mat.0.clone(), true) {
                     println!(
                         "Official solution is {:?}",
-                        utils::change_sol_base_idx(&sol)
+                        test_utils::change_sol_base_idx(&sol)
                     );
                     let sol_mat: Vec<_> = sol.iter().map(|i| mat.0[*i].clone()).collect();
                     print!("{}", utils::format_2d_string(&sol_mat));
-                    let res = utils::check_dl_res(sol_mat, true);
+                    let res = test_utils::check_dl_res(sol_mat, true);
                     assert!(res, "check official solution failed");
                     test_res[idx] = false
                 }

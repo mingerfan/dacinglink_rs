@@ -63,5 +63,9 @@ fn benchmark_dl_with_different_rc(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, benchmark_dl_with_same_rc, benchmark_dl_with_different_rc);
+criterion_group!(
+    benches,
+    benchmark_dl_with_same_rc,
+    benchmark_dl_with_different_rc
+);
 criterion_main!(benches);
