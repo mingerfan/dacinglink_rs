@@ -136,41 +136,16 @@ impl Display for DlMulti {
 impl DlMulti {
     // In this function, we will remove the column and the corresponding rows to which items in this column are linked.
     fn remove(&mut self, col: usize) {
-        let mut vertical_idx = self.D[col];
-        let mut horizontal_idx;
         self.L[self.R[col]] = self.L[col];
         self.R[self.L[col]] = self.R[col];
-        while vertical_idx != col {
-            horizontal_idx = self.R[vertical_idx];
-            while horizontal_idx != vertical_idx {
-                self.U[self.D[horizontal_idx]] = self.U[horizontal_idx];
-                self.D[self.U[horizontal_idx]] = self.D[horizontal_idx];
-                self.size[self.col[horizontal_idx]] -= 1;
-                horizontal_idx = self.R[horizontal_idx];
-            }
-            vertical_idx = self.D[vertical_idx];
-        }
     }
 
     // In this function, we will restore the column and the corresponding rows that were previously removed.
     fn recover(&mut self, col: usize) {
-        let mut vertical_idx = self.U[col];
-        let mut horizontal_idx;
-        while vertical_idx != col {
-            horizontal_idx = self.L[vertical_idx];
-            while horizontal_idx != vertical_idx {
-                self.U[self.D[horizontal_idx]] = horizontal_idx;
-                self.D[self.U[horizontal_idx]] = horizontal_idx;
-                self.size[self.col[horizontal_idx]] += 1;
-                horizontal_idx = self.L[horizontal_idx];
-            }
-            vertical_idx = self.U[vertical_idx];
-        }
         self.L[self.R[col]] = col;
         self.R[self.L[col]] = col;
     }
 
-    #[tracing::instrument]
     fn dance_internal(&mut self, deep: usize) -> bool {
         tracing::info!("Into dancing internal");
         // if empty, return false
@@ -191,26 +166,15 @@ impl DlMulti {
             }
             horizontal_idx = self.R[horizontal_idx]
         }
-        tracing::info!("Choose column: {}", min);
+        tracing::info!("Choose column: {}, self.R: {:?}", min, self.R);
         // Attemp to remove the selected column
         self.remove(min);
 
         let mut vertical_idx = self.D[min];
-        let mut horizontal_idx;
         while vertical_idx != min {
             self.res.as_mut().unwrap()[deep] = self.row[vertical_idx];
-            horizontal_idx = self.R[vertical_idx];
-            while horizontal_idx != vertical_idx {
-                self.remove(self.col[horizontal_idx]);
-                horizontal_idx = self.R[horizontal_idx];
-            }
             if self.dance_internal(deep + 1) {
                 return true;
-            }
-            let mut h_idx_recover = self.L[vertical_idx];
-            while h_idx_recover != vertical_idx {
-                self.recover(self.col[h_idx_recover]);
-                h_idx_recover = self.L[h_idx_recover];
             }
             vertical_idx = self.D[vertical_idx]
         }
@@ -235,13 +199,12 @@ impl DlMulti {
 
 #[cfg(test)]
 mod test {
-    const MAX_DL_TEST: usize = 1;
+    const MAX_DL_TEST: usize = 1000;
+    const DEBUG_MODE: bool = false;
 
     use core::panic;
     use std::{
-        sync::mpsc::{self, TryRecvError},
-        thread,
-        time::{Duration, Instant},
+        panic::catch_unwind, sync::mpsc::{self, TryRecvError}, thread, time::{Duration, Instant}
     };
 
     use proptest::prelude::*;
@@ -309,7 +272,7 @@ mod test {
 
         // Spawn a new thread to run the test logic
         let handle = thread::spawn(move || {
-            let res = test_base(r, c, case_clone, false);
+            let res = test_base(r, c, case_clone, DEBUG_MODE);
             let _ = tx.send(());
             res
         });
@@ -333,6 +296,8 @@ mod test {
                     }
                 }
                 Err(TryRecvError::Disconnected) => {
+                    println!("mat: \n {}", utils::format_2d_string(&case));
+                    println!("sol: {:?}", &case_sol);
                     panic!("Test thread panicked or disconnected");
                 }
             }
@@ -349,12 +314,19 @@ mod test {
 
     #[test]
     fn test_dl_pass() {
+        if DEBUG_MODE {
+            tracing_subscriber::fmt::init();
+        }
+        
         let mut rng = rand::thread_rng();
         let row = rng.gen_range(3..=30);
         let col = rng.gen_range(3..=30);
         let sol_row = rng.gen_range(3..=row);
-        for _ in 0..MAX_DL_TEST {
-            test_dl_pass_one_case(row, col, sol_row);
+        for i in 0..MAX_DL_TEST {
+            let res = catch_unwind(|| { test_dl_pass_one_case(row, col, sol_row);});
+            if res.is_err() {
+                panic!("Test failed in test {i}");
+            }
         }
     }
     
