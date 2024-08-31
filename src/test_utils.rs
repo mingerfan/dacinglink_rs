@@ -1,10 +1,9 @@
 #![cfg(test)]
 
 use std::{
-    error::Error, fs::OpenOptions, hash::Hash, io::{BufRead, BufReader, BufWriter, Write}, vec
+    error::Error, fs::OpenOptions, io::{BufRead, BufReader, BufWriter, Write}, vec
 };
 
-use proptest::prelude::Strategy;
 use rand::{seq::SliceRandom, Rng};
 
 use crate::println_cod;

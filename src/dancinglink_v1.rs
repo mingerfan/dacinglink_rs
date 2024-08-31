@@ -329,7 +329,7 @@ mod test {
                             // Timeout occurred
                             handle.thread().unpark(); // Attempt to wake up the thread to be forcefully terminated
                             println!("mat:\n {}", utils::format_2d_string(&case));
-                            println!("sol: {:?}", test_utils::change_sol_base_idx(&case_sol));
+                            println!("sol: {:?}", &case_sol);
                             test_utils::save_failed_case(&utils::Matrix(case.clone()), &case_sol, "failed_cases.txt");
                             panic!("Test timed out");
                         }
@@ -344,7 +344,7 @@ mod test {
             let result = handle.join().expect("Test thread panicked");
             if !result {
                 println!("mat:\n {}", utils::format_2d_string(&case));
-                println!("sol: {:?}", test_utils::change_sol_base_idx(&case_sol));
+                println!("sol: {:?}", &case_sol);
                 test_utils::save_failed_case(&utils::Matrix(case.clone()), &case_sol, "failed_cases.txt");
             }
             prop_assert!(result);
