@@ -1,10 +1,11 @@
 #![cfg(test)]
 
 use std::{
-    error::Error,
-    fs::OpenOptions,
-    io::{BufRead, BufReader, BufWriter, Write},
+    error::Error, fs::OpenOptions, hash::Hash, io::{BufRead, BufReader, BufWriter, Write}, vec
 };
+
+use proptest::prelude::Strategy;
+use rand::{seq::SliceRandom, Rng};
 
 use crate::println_cod;
 use crate::utils::{format_2d_string, Matrix};
@@ -139,15 +140,13 @@ pub fn generate_muticover_matrix(
     }
 
     let mut rng = rand::thread_rng();
-
-    for (_, m_cols) in matrix
-        .iter_mut()
-        .enumerate()
-        .filter(|(row, _)| !selected_rows.contains(row))
-    {
-        for m_item in m_cols.iter_mut() {
-            if rand::Rng::gen_bool(&mut rng, 0.1) {
-                *m_item = 1;
+    for &i in selected_rows.iter().take(rng.gen_range(1..=solution_rows)) {
+        let mut numbers: Vec<_> = (0..cols).collect();
+        numbers.shuffle(&mut rng);
+        for j in numbers {
+            if matrix[i][j] != 1 {
+                matrix[i][j] = 1;
+                break;
             }
         }
     }
@@ -156,7 +155,7 @@ pub fn generate_muticover_matrix(
         .iter()
         .map(|idx| matrix[*idx].clone())
         .collect();
-    assert!(check_dl_res(test, false), "Failed to gen valid matrix");
+    assert!(check_multicover(test, false), "Failed to gen valid matrix");
 
     let mut sol: Vec<_> = selected_rows.into_iter().collect();
     sol.sort();
@@ -208,6 +207,10 @@ macro_rules! println_cod {
 mod test {
     use std::fs;
 
+    use rand::Rng;
+
+    use crate::utils;
+
     use super::*;
 
     #[test]
@@ -218,9 +221,22 @@ mod test {
     }
 
     #[test]
-    fn test_check_muticover() {
+    fn test_check_multicover() {
         let vec_test = vec![vec![1, 0, 1], vec![1, 2, 0], vec![1, 3, 5]];
         check_multicover(vec_test, true);
+    }
+
+    #[test]
+    fn test_gen_multicover() {
+        let mut rng = rand::thread_rng();
+        for _ in 0..10 {
+            let row = rng.gen_range(1..=20);
+            let col = rng.gen_range(1..=20);
+            let sol = rng.gen_range(1..=row);
+            let ret = generate_muticover_matrix(row, col, sol);
+            println!("{}", utils::format_2d_string(&ret.0));
+            check_multicover(ret.0, true);
+        }
     }
 
     #[test]
