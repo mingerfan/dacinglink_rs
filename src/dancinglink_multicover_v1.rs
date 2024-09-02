@@ -22,7 +22,7 @@ pub struct DlMulti {
 
 const DEFAULT_ROW: usize = 10;
 const DEFAULT_COL: usize = 10;
-const MAX_DEEP: usize = 100;
+const MAX_DEEP: usize = 500;
 
 impl DlMulti {
     #[allow(non_snake_case)]
@@ -134,13 +134,13 @@ impl Display for DlMulti {
 }
 
 impl DlMulti {
-    // In this function, we will remove the column and the corresponding rows to which items in this column are linked.
+    // In this function, we will remove the column.
     fn remove(&mut self, col: usize) {
         self.L[self.R[col]] = self.L[col];
         self.R[self.L[col]] = self.R[col];
     }
 
-    // In this function, we will restore the column and the corresponding rows that were previously removed.
+    // In this function, we will restore the column.
     fn recover(&mut self, col: usize) {
         self.L[self.R[col]] = col;
         self.R[self.L[col]] = col;
@@ -199,7 +199,7 @@ impl DlMulti {
 
 #[cfg(test)]
 mod test {
-    const MAX_DL_TEST: usize = 1000;
+    const MAX_DL_TEST: usize = 10000;
     const DEBUG_MODE: bool = false;
 
     use core::panic;
@@ -319,8 +319,8 @@ mod test {
         }
         
         let mut rng = rand::thread_rng();
-        let row = rng.gen_range(3..=30);
-        let col = rng.gen_range(3..=30);
+        let row = rng.gen_range(3..=100);
+        let col = rng.gen_range(3..=100);
         let sol_row = rng.gen_range(3..=row);
         for i in 0..MAX_DL_TEST {
             let res = catch_unwind(|| { test_dl_pass_one_case(row, col, sol_row);});

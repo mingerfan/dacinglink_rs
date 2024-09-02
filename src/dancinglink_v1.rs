@@ -24,7 +24,7 @@ pub struct DL {
 
 const DEFAULT_ROW: usize = 10;
 const DEFAULT_COL: usize = 10;
-const MAX_DEEP: usize = 100;
+const MAX_DEEP: usize = 500;
 
 impl DL {
     #[allow(non_snake_case)]
