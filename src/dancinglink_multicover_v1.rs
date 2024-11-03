@@ -224,6 +224,18 @@ mod test {
         println!("{dl}");
     }
 
+    #[test]
+    fn temp_test() {
+        let mut dl = DlMulti::new(4, 4);
+        dl.insert(1, 1);
+        dl.insert(2, 2);
+        dl.insert(3, 3);
+        dl.insert(4, 4);
+        println!("{dl}");
+        let res = dl.dance().unwrap();
+        println!("{:?}", res);
+    }
+
     fn test_base(r: usize, c: usize, case: Vec<Vec<usize>>, cod: bool) -> bool {
         let mut dl = DlMulti::new(r, c);
         for (r_in, c_vec) in case.iter().enumerate() {
